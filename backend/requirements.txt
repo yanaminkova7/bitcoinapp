@@ -1,0 +1,20 @@
+# App / config
+streamlit
+pydantic
+pydantic-settings
+
+# Data & ML (installed as later phases require them)
+pandas
+numpy
+scikit-learn
+torch
+yfinance
+joblib
+
+# Exploratory analysis / notebooks
+jupyter
+matplotlib
+statsmodels
+
+# Dev / testing
+pytest
