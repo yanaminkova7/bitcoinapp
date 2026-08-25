@@ -4,17 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-`app.py` is currently reset to Streamlit's stock "Blank app" starter template (a slider-controlled
-Altair spiral chart) and is **disconnected from the Bitcoin forecasting backend** — it does not
-import from `backend/`. The Bitcoin forecasting/backtesting system described below still exists in
-full under `backend/`, `scripts/`, `data/`, `models/`, and is exercised by the pytest suite and the
-offline scripts, but nothing currently wires it back into `app.py`. Root `requirements.txt` was
-trimmed to match the blank template's actual imports (`streamlit`, `altair`, `numpy`, `pandas`);
-`backend/requirements.txt` (the full ML/dev dependency set) is untouched. When re-connecting
-`app.py` to the backend, restore `sys.path` insertion of `backend/` and the imports from the `app`
-package there (see git history for the previous full version), and restore the dependencies
-`app.py` needs (`yfinance`, `scikit-learn`, `joblib`, `torch`, `pydantic`, `pydantic-settings`) to
-root `requirements.txt` since that's what Streamlit Cloud reads for deployment.
+`app.py` is the Bitcoin forecasting Streamlit dashboard, wired to the forecasting/backtesting
+system under `backend/`: it inserts `backend/` onto `sys.path` and imports the `app` package from
+there (baselines, ML models, LSTM, walk-forward evaluation, empirical prediction intervals, and
+SQLite persistence). Root `requirements.txt` carries the full deploy dependency set the dashboard
+needs (`streamlit`, `yfinance`, `pandas`, `numpy`, `scikit-learn`, `joblib`, `torch`, `pydantic`,
+`pydantic-settings`) since that's what Streamlit Community Cloud reads to build the deployment
+environment; `backend/requirements.txt` is the superset used for local dev (adds jupyter, pytest,
+matplotlib, statsmodels). The repo is pushed to `yanaminkova7/bitcoinapp` on GitHub (public, so
+Streamlit Cloud can read it without extra app-permission grants) for Streamlit Community Cloud
+deployment with branch `main` and main file path `app.py`.
 
 ## Commands
 
@@ -59,9 +58,6 @@ There is no lint/format command configured in this repo.
 
 ## Architecture
 
-The sections below describe the backend as built — it's just not currently invoked from `app.py`
-(see "What this is" above).
-
 **`backend/app/forecasting/`** — all models implement `BaseForecaster` (`base.py`):
 `fit(df) -> self`, `predict(horizon) -> pd.Series`, plus joblib `save`/`load`. This lets `app.py`
 and the scripts treat every model (baselines, ML, LSTM) identically. Two shapes of `predict`
@@ -78,20 +74,18 @@ deliberately not a normal-distribution assumption, since BTC returns are fat-tai
 
 **`backend/app/database/`** — SQLite (`db.py` + `schema.py`) persists three things: raw market
 data, every prediction the app ever logs (for live monitoring), and model run/backtest history.
-the previous `app.py`'s "Live Forecast Monitoring" section compared live realized error against
-backtested MAE per model and flagged models whose live error had drifted significantly above
-backtest — separate from and complementary to the walk-forward backtests, which replay history
-rather than wait for it.
+`app.py`'s "Live Forecast Monitoring" section compares live realized error against backtested MAE
+per model and flags models whose live error has drifted significantly above backtest — separate
+from and complementary to the walk-forward backtests, which replay history rather than wait for it.
 
-**Performance-driven split (as previously wired into `app.py`)**: the walk-forward comparison
-table refits every model at every fold (up to ~90 folds) on each Streamlit rerun, so LSTM was
-deliberately excluded from it (`LSTM_ONLY_MODEL`, kept separate from `MODELS`) — refitting an LSTM
-that many times would freeze the UI. LSTM was still selectable for a single live forecast, with its
-own held-out (not walk-forward) calibration for its prediction interval via
+**Performance-driven split (as wired into `app.py`)**: the walk-forward comparison table refits
+every model at every fold (up to ~90 folds) on each Streamlit rerun, so LSTM is deliberately
+excluded from it (`LSTM_ONLY_MODEL`, kept separate from `MODELS`) — refitting an LSTM that many
+times would freeze the UI. LSTM is still selectable for a single live forecast, with its own
+held-out (not walk-forward) calibration for its prediction interval via
 `lstm_calibration_residuals`. A full walk-forward LSTM backtest is only available offline via
 `scripts/backtest.py`. Both `compare_all_models` and `lstm_calibration_residuals` are
-`st.cache_data`-cached so repeated Streamlit reruns (widget interaction) wouldn't repeatedly
-retrain.
+`st.cache_data`-cached so repeated Streamlit reruns (widget interaction) don't repeatedly retrain.
 
 `backend/app/config.py` loads settings from `.env` via pydantic-settings (`Settings`); secrets use
 `SecretStr` so they never appear in logs/tracebacks. No API key is currently required (yfinance is

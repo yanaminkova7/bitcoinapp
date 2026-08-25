@@ -9,7 +9,9 @@ Forecasts are presented as model estimates with uncertainty, never as guaranteed
 **Status:** data collection, preprocessing, exploratory analysis, feature engineering, baselines,
 traditional ML models (Linear Regression, Random Forest, Gradient Boosting), an LSTM, walk-forward
 backtesting, empirical prediction intervals, and SQLite-backed persistence/monitoring are all
-implemented. Not yet done: automated (unattended) scheduled retraining, and deployment.
+implemented, and `app.py` is wired to all of it. The repo is set up for Streamlit Community Cloud
+deployment (`yanaminkova7/bitcoinapp`, branch `main`, main file path `app.py`). Not yet done:
+automated (unattended) scheduled retraining.
 
 ## Technology Stack
 
@@ -156,5 +158,4 @@ needs no API key). If a future data source needs one, add it to `.env` — never
 This project is under active, incremental development. Bitcoin price forecasts are model
 estimates with inherent uncertainty and should not be treated as financial advice or guaranteed
 outcomes. Backtested performance does not guarantee future performance. Prediction intervals are
-empirical estimates, not statistically guaranteed probabilities. The app is not yet deployed;
-running it requires a local Python environment as described above.
+empirical estimates, not statistically guaranteed probabilities.
